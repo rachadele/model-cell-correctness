@@ -1,0 +1,6 @@
+.nextflow/
+*h5ad
+*tsv*
+*csv*
+.nextflow.log*
+*pycache*

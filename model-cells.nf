@@ -1,0 +1,76 @@
+process addParams {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/params_added", mode: 'copy'
+
+    input:
+    //val pipeline_run_dir_name
+    tuple val(run_name), val(params_file), val(ref_obs), val(pipeline_results)
+
+
+    output:
+    path "*_predicted_meta_combined.tsv", emit:  predicted_meta_combined
+
+    script:
+    ref_keys = params.ref_keys.join(' ')
+    """
+    python $projectDir/bin/add_params.py --run_name ${run_name}  \\
+				--pipeline_results ${pipeline_results} \\
+				--params_file ${params_file} \\
+				--subsample ${params.subsample} \\
+                --ref_keys ${ref_keys} \\
+                --mapping_file ${params.mapping_file}
+						
+    """
+
+}
+
+process aggregateResults {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/aggregated_results", mode: 'copy'
+
+    input:
+    path predicted_meta_combined
+
+    output:
+   // path "f1_results_all_pipeline_runs.tsv", emit: f1_results_aggregated
+	path "**predicted_meta_combined.tsv", emit: aggregated_results
+	path "**png"
+
+    script:
+    """
+    python $projectDir/bin/aggregate_results.py --pipeline_results ${predicted_meta_combined}
+    """
+
+}
+
+workflow {
+
+    Channel
+    .fromPath("${params.results}/*", type: 'dir') // Get all subdirectories
+    .map { pipeline_run_dir ->
+        def pipeline_run_dirname = pipeline_run_dir.getName().toString()
+        def params_file = "${pipeline_run_dir}/params.yaml"
+        def ref_obs = "${pipeline_run_dir}/refs/"
+        // Collect 'f1_results' directories
+        def pipeline_results = []
+        pipeline_run_dir.eachDirRecurse { dir ->
+                if (dir.getName() == 'scvi' || dir.getName() == 'seurat') {
+                        def dir_path = dir.toString()
+                        pipeline_results << dir_path
+            }
+        }
+
+        [pipeline_run_dirname, params_file, ref_obs, pipeline_results.flatten().join(' ')] // Return collected results for this pipeline_run_dir
+    }
+
+    .set { all_pipeline_results }
+
+    // add parameters to files  addParams(all_pipeline_results) 
+    addParams(all_pipeline_results)
+	aggregateResults(addParams.out.predicted_meta_combined.flatten().toList())
+
+
+	predicted_meta_combined = aggregateResults.out.aggregated_results
+//	map_correct(predicted_meta_combined)
+
+}
