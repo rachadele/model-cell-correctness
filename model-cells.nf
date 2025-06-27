@@ -34,8 +34,7 @@ process aggregateResults {
     output:
    // path "f1_results_all_pipeline_runs.tsv", emit: f1_results_aggregated
 	path "**predicted_meta_combined.tsv", emit: aggregated_results
-	path "**_mqc**", emit: mqc_results
-
+	path "multiqc/", emit: multiqc_dir
     when:
 
     script:
@@ -58,11 +57,28 @@ process model_correct {
 
     script:
     """
-    python $projectDir/bin/model-correct.py --predicted_meta_combined ${predicted_meta_combined} \\
+    python $projectDir/bin/model-correct.py --predicted_meta ${predicted_meta_combined} \\
                                              --mapping_file ${params.mapping_file} \\
                                              --ref_keys ${params.ref_keys.join(' ')}
     """
 }
+
+process run_multiqc {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/multiqc", mode: 'copy'
+
+    input:
+        path (qc_dir)
+
+    output:
+    path "multiqc_report.html"
+
+    script:
+    """
+    multiqc ${qc_dir} -d --config ${params.multiqc_config}
+    """
+}
+
 workflow {
 
     Channel
@@ -93,4 +109,9 @@ workflow {
 	predicted_meta_combined = aggregateResults.out.aggregated_results
 
     model_correct(predicted_meta_combined)
+
+    aggregateResults.out.multiqc_dir
+    .set { qc_dir }
+
+    run_multiqc(qc_dir)
 }

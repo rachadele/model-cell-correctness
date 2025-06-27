@@ -1,0 +1,53 @@
+# add title with organism and subsample
+
+data_format: 'yaml'
+
+run_modules:
+    - custom_content
+
+custom_data:
+  subclass_assignments:
+    section_name: 'Subclass Assignments'
+    description: 'Subclass assignments after mapping to appropriate level of granularity.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  class_assignments:
+    section_name: 'Class Assignments'
+    description: 'Class assignments after mapping to appropriate level of granularity.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+  
+  family_assignments:
+    section_name: 'Family Assignments'
+    description: 'Family assignments after mapping to appropriate level of granularity.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  global_assignments:
+    section_name: 'Global Assignments'
+    description: 'Global assignments after mapping to appropriate level of granularity.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  
+
+
+sp:
+  subclass_assignments:
+    fn: '**subclass_assignments_after_map_mqc.tsv'
+  class_assignments:
+    fn: '**class_assignments_after_map_mqc.tsv'
+  family_assignments:
+    fn: '**family_assignments_after_map_mqc.tsv'
+  global_assignments:
+    fn: '**global_assignments_after_map_mqc.tsv'
+
+
+  
+custom_content:
+  order:
+    - subclass_assignments
+    - class_assignments
+    - family_assignments
+    - global_assignments

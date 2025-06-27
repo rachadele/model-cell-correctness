@@ -100,7 +100,9 @@ def main():
 
 
     predicted_meta_df.to_csv("predicted_meta_combined.tsv", sep="\t", index=False)
-        
+       
+    multiqc_dir = "multiqc"
+    os.makedirs(multiqc_dir, exist_ok=True) 
     # save df for multiqc report
     # get the unique values for each column
     subclass_assignments = (
@@ -111,7 +113,7 @@ def main():
                             .reset_index()
                             )
 
-    subclass_assignments.to_csv(os.path.join("subclass_assignments_after_map_mqc.tsv"), sep="\t", index=False)
+    subclass_assignments.to_csv(os.path.join(multiqc_dir,"subclass_assignments_after_map_mqc.tsv"), sep="\t", index=False)
     
     #do this for class and family
     
@@ -121,7 +123,7 @@ def main():
                         .unstack(fill_value=0)
                         .reset_index()
                         )
-    class_assignments.to_csv(os.path.join("class_assignments_after_map_mqc.tsv"), sep="\t", index=False)
+    class_assignments.to_csv(os.path.join(multiqc_dir, "class_assignments_after_map_mqc.tsv"), sep="\t", index=False)
     
     family_assignments = ( predicted_meta_df
                         .groupby(["family", "predicted_family"])
@@ -129,7 +131,7 @@ def main():
                         .unstack(fill_value=0)
                         .reset_index()
                         )
-    family_assignments.to_csv(os.path.join("family_assignments_after_map_mqc.tsv"), sep="\t", index=False)
+    family_assignments.to_csv(os.path.join(multiqc_dir, "family_assignments_after_map_mqc.tsv"), sep="\t", index=False)
 
 if __name__ == "__main__":
     main()
