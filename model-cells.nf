@@ -34,7 +34,9 @@ process aggregateResults {
     output:
    // path "f1_results_all_pipeline_runs.tsv", emit: f1_results_aggregated
 	path "**predicted_meta_combined.tsv", emit: aggregated_results
-	path "**png"
+	path "**_mqc**", emit: mqc_results
+
+    when:
 
     script:
     """
@@ -43,6 +45,24 @@ process aggregateResults {
 
 }
 
+process model_correct {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/logreg_results", mode: 'copy'
+
+    input:
+    path predicted_meta_combined
+
+    output:
+    path "**png", emit: plots
+    //path "**_logreg_fits.tsv", emit: logreg_results
+
+    script:
+    """
+    python $projectDir/bin/model-correct.py --predicted_meta_combined ${predicted_meta_combined} \\
+                                             --mapping_file ${params.mapping_file} \\
+                                             --ref_keys ${params.ref_keys.join(' ')}
+    """
+}
 workflow {
 
     Channel
@@ -71,6 +91,6 @@ workflow {
 
 
 	predicted_meta_combined = aggregateResults.out.aggregated_results
-//	map_correct(predicted_meta_combined)
 
+    model_correct(predicted_meta_combined)
 }

@@ -41,10 +41,10 @@ def map_valid_labels(query, ref_keys, mapping_df):
 
   return query            
 
-def is_correct(adata, ref_keys, mapping_df, level="subclass"):
+def is_correct(df, level="subclass"):
   # change to string type
-  adata.obs["correct_"+level] = adata.obs["predicted_"+level].astype(str) == adata.obs[level].astype(str)
-  return adata
+  df["correct_"+level] = df["predicted_"+level].astype(str) == df[level].astype(str)
+  return df
   
 def stacked_bar_plot(predicted_meta, level="subclass"):
   subclass_assignments = predicted_meta.groupby([level, "correct"]).size().reset_index(name='count')

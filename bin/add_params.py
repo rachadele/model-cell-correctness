@@ -95,12 +95,11 @@ def main():
                     ref_name = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname((full_path))))) 
                     query_name = os.path.basename(os.path.dirname(os.path.dirname(full_path)))  # Parent of parent
 
-                    # Check for .tsv files
                     tempdf = pd.read_csv(os.path.join(root, file), sep="\t")  # Read the .tsv file
+                    
+                    # map valid labels BEFORE subsampling to ensure correct mapping
                     tempdf = map_valid_labels(tempdf, ref_keys, mapping_df)
-                    tempdf = is_correct(tempdf, ref_keys, mapping_df, level="subclass")
-                    tempdf = is_correct(tempdf, ref_keys, mapping_df, level="class")
-                    tempdf = is_correct(tempdf, ref_keys, mapping_df, level="family")
+                    
                     # subsample the DataFrame if it has more than subsample rows
                     if len(tempdf) > subsample:
                         tempdf = tempdf.sample(n=subsample, random_state=42)
@@ -110,9 +109,7 @@ def main():
                     tempdf["study"] = study_name
                     tempdf["ref_region"] = reg_regions.get(ref_name, "unknown")  # Add reference region
                    
-                
-                                       # Add the parameters to the DataFrame                 
-                   
+                    # Add the parameters to the DataFrame                 
                     for key, value in parameters_dict.items():
                         tempdf[key] = value
                     predicted_meta_df = pd.concat([predicted_meta_df, tempdf], ignore_index=True)  # Append to the DataFrame
