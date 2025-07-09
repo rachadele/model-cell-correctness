@@ -1,0 +1,11 @@
+{
+	"organism": "homo_sapiens",
+	"mapping_file": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/meta/census_map_human.tsv",
+	"ref_keys": [
+		"subclass",
+		"class",
+		"family"
+	],
+	"subsample": 100,
+	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/homo_sapiens/sample/SCT"
+}

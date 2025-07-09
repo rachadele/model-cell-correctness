@@ -35,11 +35,11 @@ process aggregateResults {
    // path "f1_results_all_pipeline_runs.tsv", emit: f1_results_aggregated
 	path "**predicted_meta_combined.tsv", emit: aggregated_results
 	path "multiqc/", emit: multiqc_dir
-    when:
 
     script:
     """
-    python $projectDir/bin/aggregate_results.py --pipeline_results ${predicted_meta_combined}
+    python $projectDir/bin/aggregate_results.py --pipeline_results ${predicted_meta_combined} \\
+                                                --ref_keys ${params.ref_keys.join(' ')}
     """
 
 }
@@ -57,9 +57,46 @@ process model_correct {
 
     script:
     """
-    python $projectDir/bin/model-correct.py --predicted_meta ${predicted_meta_combined} \\
+    python $projectDir/bin/model_correct.py --predicted_meta ${predicted_meta_combined} \\
                                              --mapping_file ${params.mapping_file} \\
                                              --ref_keys ${params.ref_keys.join(' ')}
+    """
+}
+
+process split_by_label {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/split_by_label", mode: 'copy'
+
+    input:
+    path predicted_meta_combined
+
+    output:
+    path "**predicted_meta_subset.tsv", emit: predicted_meta_labels
+    
+    script:
+    """
+    python $projectDir/bin/split_by_label.py --predicted_meta ${predicted_meta_combined} \\
+                                                --ref_keys ${params.ref_keys.join(' ')}
+    """
+}
+
+process model_per_celltype {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/cell_type_models/${cell_type}", mode: 'copy'
+
+    input:
+    tuple val(cell_type), path(predicted_meta_subset)
+
+    output:
+    path "**png"
+    path "**_coefficients.tsv", emit: coefficients
+
+    script:
+    """
+    python $projectDir/bin/model_correct.py --predicted_meta ${predicted_meta_subset} \\
+                                                  --mapping_file ${params.mapping_file} \\
+                                                  --ref_keys ${params.ref_keys.join(' ')} \\
+                                                    --cell_type ${cell_type}
     """
 }
 
@@ -109,6 +146,19 @@ workflow {
 	predicted_meta_combined = aggregateResults.out.aggregated_results
 
     model_correct(predicted_meta_combined)
+
+    split_by_label(predicted_meta_combined)
+
+    split_by_label.out.predicted_meta_labels.flatMap().set { predicted_meta_labels }
+
+    predicted_meta_labels.map { predicted_meta_subset ->
+        def cell_type = predicted_meta_subset.getName().replace("_predicted_meta_subset.tsv", "")
+        [cell_type, predicted_meta_subset]
+    }.set { cell_type_subset }
+
+    
+   model_per_celltype(cell_type_subset) 
+
 
     aggregateResults.out.multiqc_dir
     .set { qc_dir }

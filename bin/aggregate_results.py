@@ -23,11 +23,26 @@ import sys
 import matplotlib.lines as mlines
 from utils import *
 
+
+dev_stage_mapping_dict = {
+    "HsapDv_0000083": "infant",
+    "HsapDv_0000084": "toddler",
+    "HsapDv_0000085": "child",
+    "HsapDv_0000086": "adolescent",
+    "HsapDv_0000088": "adult",
+    "HsapDv_0000091": "late adult",
+    "nan": None,
+    np.nan: None
+}
+
 # Function to parse command line arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Download model file based on organism, census version, and tree file.")
     parser.add_argument('--pipeline_results', type=str, nargs = "+", 
-                        help="files containing f1 results with params")                                            
+                        help="files containing f1 results with params")
+    parser.add_argument("--ref_keys", type=str, nargs="+",
+                        help="Reference keys to map",
+                        default=["subclass", "class", "family", "global"])                                            
     if __name__ == "__main__":
         known_args, _ = parser.parse_known_args()
         return known_args
@@ -40,7 +55,7 @@ def main():
     # Set organism and census_version from arguments
     pipeline_results = args.pipeline_results
 
-    
+    ref_keys = args.ref_keys 
     predicted_meta_df = pd.DataFrame() 
      
     #for file in os.listdir(pipeline_results):
@@ -74,7 +89,7 @@ def main():
         predicted_meta_df["disease"] = np.where(predicted_meta_df["study"]=="GSE211870", "Control", predicted_meta_df["disease"]) 
     
         # deal with annotation mismatch between gemma queries and curated queries
-        predicted_meta_df["dev_stage"] = predicted_meta_df["dev_stage"].apply(map_development_stage) 
+        predicted_meta_df["dev_stage"] = predicted_meta_df["dev_stage"].map(dev_stage_mapping_dict) 
         
     # Data wrangling for Rosmap error (dev stage mistakely mapped as "infant")
         predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["study"] == "rosmap" , "late adult", predicted_meta_df["dev_stage"])
@@ -113,7 +128,7 @@ def main():
                             .reset_index()
                             )
 
-    subclass_assignments.to_csv(os.path.join(multiqc_dir,"subclass_assignments_after_map_mqc.tsv"), sep="\t", index=False)
+    subclass_assignments.to_csv(os.path.join(multiqc_dir,"pred_subclass_assignments_mqc.tsv"), sep="\t", index=False)
     
     #do this for class and family
     
@@ -123,7 +138,7 @@ def main():
                         .unstack(fill_value=0)
                         .reset_index()
                         )
-    class_assignments.to_csv(os.path.join(multiqc_dir, "class_assignments_after_map_mqc.tsv"), sep="\t", index=False)
+    class_assignments.to_csv(os.path.join(multiqc_dir, "pred_class_assignments_mqc.tsv"), sep="\t", index=False)
     
     family_assignments = ( predicted_meta_df
                         .groupby(["family", "predicted_family"])
@@ -131,7 +146,15 @@ def main():
                         .unstack(fill_value=0)
                         .reset_index()
                         )
-    family_assignments.to_csv(os.path.join(multiqc_dir, "family_assignments_after_map_mqc.tsv"), sep="\t", index=False)
+    family_assignments.to_csv(os.path.join(multiqc_dir, "pred_family_assignments_mqc.tsv"), sep="\t", index=False)
+    if "global" in ref_keys:
+        global_assignments = ( predicted_meta_df
+                    .groupby(["global", "predicted_global"])
+                    .size()
+                    .unstack(fill_value=0)
+                    .reset_index()
+                    )
+        global_assignments.to_csv(os.path.join(multiqc_dir, "pred_global_assignments_mqc.tsv"), sep="\t", index=False)
 
 if __name__ == "__main__":
     main()

@@ -98,7 +98,7 @@ def main():
                     tempdf = pd.read_csv(os.path.join(root, file), sep="\t")  # Read the .tsv file
                     
                     # map valid labels BEFORE subsampling to ensure correct mapping
-                    tempdf = map_valid_labels(tempdf, ref_keys, mapping_df)
+                    #tempdf = map_valid_labels(tempdf, ref_keys, mapping_df)
                     
                     # subsample the DataFrame if it has more than subsample rows
                     if len(tempdf) > subsample:

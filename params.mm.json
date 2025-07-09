@@ -1,0 +1,12 @@
+{
+	"organism": "mus_musculus",
+	"subsample": 100,
+	"mapping_file": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/meta/census_map_mouse_author.tsv",
+	"ref_keys": [
+		"subclass",
+		"class",
+		"family",
+		"global"
+	],
+	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/mus_musculus/subsample_query_100/old_refs"
+}
