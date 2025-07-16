@@ -6,6 +6,6 @@
 		"class",
 		"family"
 	],
-	"subsample": 100,
-	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/homo_sapiens/sample/SCT"
+	"subsample": 10,
+	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/2025-01-30/mus_musculus/100/dataset_id/SCT"
 }
