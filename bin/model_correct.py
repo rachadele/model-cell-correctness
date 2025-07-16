@@ -32,7 +32,7 @@ def main():
 
     # Load predicted metadata
     predicted_meta = pd.read_csv(predicted_meta_path, sep="\t")
-    binary_features = ["outlier_ribo", "outlier_mito", "outlier_hb", "counts_outlier"]
+    binary_features = ["outlier_ribo", "outlier_mito", "outlier_hb", "counts_outlier", "genes_outlier", "umi_outlier"]
     continuous_features = ["pct_counts_ribo", "pct_counts_mito", "pct_counts_hb", "log1p_n_genes_by_counts", "log1p_total_counts"]
 
     for col in binary_features + continuous_features + ["predicted_doublet", "doublet_score"]:

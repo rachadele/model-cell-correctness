@@ -121,13 +121,13 @@ def main():
                         )
     sex_correctness.to_csv(os.path.join(multiqc_dir, "sex_correctness_mqc.tsv"), sep="\t", index=False)
     
-    query_correctness = (predicted_meta_df
-                        .groupby(["query", "correct_subclass"])
+    study_correctness = (predicted_meta_df
+                        .groupby(["study", "correct_subclass"])
                         .size()
                         .unstack(fill_value=0)
                         .reset_index()
                         )
-    query_correctness.to_csv(os.path.join(multiqc_dir, "query_correctness_mqc.tsv"), sep="\t", index=False)
+    study_correctness.to_csv(os.path.join(multiqc_dir, "study_correctness_mqc.tsv"), sep="\t", index=False)
     
     ref_correctness = (predicted_meta_df
                         .groupby(["reference", "correct_subclass"])
@@ -145,7 +145,10 @@ def main():
                         )
     method_correctness.to_csv(os.path.join(multiqc_dir, "method_correctness_mqc.tsv"), sep="\t", index=False)
 
-
+    #if "age" in predicted_meta_df.columns:
+      #  #check if float
+       # if predicted_meta_df["age"].dtype == "float64":
+            
 if __name__ == "__main__":
     main()
     

@@ -30,23 +30,63 @@ custom_data:
     file_format: 'tsv'
     plot_type: 'barplot'
   
-  correctness:
-    section_name: 'Correctness of Assignments'
-    description: 'Correctness of assignments at different levels.'
+  study_correctness:
+    section_name: 'Study Correctness'
+    description: 'Correctness of study assignments.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  ref_correctness:
+    section_name: 'Reference Correctness'
+    description: 'Correctness of reference assignments.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  method_correctness:
+    section_name: 'Method Correctness'
+    description: 'Correctness by method'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  sex_correctness:
+    section_name: 'Sex Correctness'
+    description: 'Correctness by sex'
+    file_format: 'tsv'
+    plot_type: 'barplot'  
+
+  genotype_correctness:
+    section_name: 'Genotype Correctness'
+    description: 'Correctness by genotype'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  treatment_correctness:
+    section_name: 'Treatment Correctness'
+    description: 'Correctness by treatment'
     file_format: 'tsv'
     plot_type: 'barplot'
 
 sp:
   subclass_assignments:
-    fn: '**pred_ subclass_assignments_mqc.tsv'
+    fn: '**pred_subclass_assignments_mqc.tsv'
   class_assignments:
     fn: '**pred_class_assignments_mqc.tsv'
   family_assignments:
     fn: '**pred_family_assignments_mqc.tsv'
   global_assignments:
     fn: '**pred_global_assignments_mqc.tsv'
-  correctness:
-    fn: '**correctness_mqc.tsv'
+  study_correctness:
+    fn: '**study_correctness_mqc.tsv'
+  ref_correctness:
+    fn: '**ref_correctness_mqc.tsv'
+  method_correctness:
+    fn: '**method_correctness_mqc.tsv'
+  genotype_correctness:
+    fn: '**genotype_correctness_mqc.tsv'
+  treatment_correctness:
+    fn: '**treatment_correctness_mqc.tsv'
+  sex_correctness:
+    fn: '**sex_correctness_mqc.tsv'
 
 
   
@@ -56,4 +96,4 @@ custom_content:
     - class_assignments
     - family_assignments
     - global_assignments
-    - correctness
+
