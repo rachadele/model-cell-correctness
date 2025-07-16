@@ -34,32 +34,54 @@ process aggregateResults {
     output:
    // path "f1_results_all_pipeline_runs.tsv", emit: f1_results_aggregated
 	path "**predicted_meta_combined.tsv", emit: aggregated_results
-	path "multiqc/", emit: multiqc_dir
 
     script:
     """
     python $projectDir/bin/aggregate_results.py --pipeline_results ${predicted_meta_combined} \\
-                                                --ref_keys ${params.ref_keys.join(' ')}
+                                                --ref_keys ${params.ref_keys.join(' ')} \\
+                                                --cutoff ${params.cutoff}
+
     """
 
 }
 
+
+process plotQC {
+    conda '/home/rschwartz/anaconda3/envs/scanpyenv'
+    publishDir "${params.outdir}/qc_plots", mode: 'copy'
+
+    input:
+    path predicted_meta_combined
+
+    output:
+    path "multiqc/", emit: multiqc_dir
+
+    script:
+    ref_keys = params.ref_keys.join(' ')
+    """
+    python $projectDir/bin/plotQC.py --predicted_meta ${predicted_meta_combined} \\
+                                        --ref_keys ${ref_keys} \\
+                                        --cutoff ${params.cutoff}
+    """
+}
+
 process model_correct {
     conda '/home/rschwartz/anaconda3/envs/scanpyenv'
-    publishDir "${params.outdir}/logreg_results", mode: 'copy'
+    publishDir "${params.outdir}/all_cells_model", mode: 'copy'
 
     input:
     path predicted_meta_combined
 
     output:
     path "**png", emit: plots
-    //path "**_logreg_fits.tsv", emit: logreg_results
+    path "**.tsv", emit: logreg_results
 
     script:
     """
     python $projectDir/bin/model_correct.py --predicted_meta ${predicted_meta_combined} \\
                                              --mapping_file ${params.mapping_file} \\
-                                             --ref_keys ${params.ref_keys.join(' ')}
+                                             --ref_keys ${params.ref_keys.join(' ')} \\
+                                             --cell_type all
     """
 }
 
@@ -105,7 +127,7 @@ process run_multiqc {
     publishDir "${params.outdir}/multiqc", mode: 'copy'
 
     input:
-        path (qc_dir)
+    path qc_dir
 
     output:
     path "multiqc_report.html"
@@ -157,11 +179,8 @@ workflow {
     }.set { cell_type_subset }
 
     
-   model_per_celltype(cell_type_subset) 
+    model_per_celltype(cell_type_subset) 
 
-
-    aggregateResults.out.multiqc_dir
-    .set { qc_dir }
-
-    run_multiqc(qc_dir)
+    plotQC(predicted_meta_combined)
+    run_multiqc(plotQC.out.multiqc_dir)
 }

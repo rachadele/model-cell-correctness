@@ -46,7 +46,7 @@ def map_valid_labels(query, ref_keys, mapping_df):
 
 def is_correct(df, level="subclass"):
   # change to string type
-  df["correct_"+level] = df["predicted_"+level].astype(str) == df[level].astype(str)
+  df["correct_" + level] = df["predicted_" + level].astype(str) == df[level].astype(str)
   return df
   
 def stacked_bar_plot(predicted_meta, level="subclass"):
@@ -102,21 +102,13 @@ def write_factor_summary(df, factors):
     value_counts = df[["study","query","query_region"]].value_counts().reset_index()
     value_counts.to_csv(f"region_study_value_counts.tsv", sep="\t", index=False)
     
-def logistic_regression_on_correctness(predicted_meta, outcome, feature_cols, formula=None):
+def logistic_regression_on_correctness(predicted_meta, outcome, formula=None):
     df = predicted_meta.copy()
-    # Convert boolean to int, and ensure numerics are floats
-    for col in feature_cols:
-        if pd.api.types.is_bool_dtype(df[col]):
-            df[col] = df[col].astype(int)
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].astype(float)
-        # string/categorical will be handled by formula
-    
+    # Convert boolean to int, and ensure numerics are floats 
     df[outcome] = df[outcome].astype(int)
-    terms = []
     # Fit logistic regression
     fit = smf.logit(formula=formula, data=df).fit()
-    return fit, df
+    return fit
 
 def run_llmer(df, formula, family="binomial"):
   print(f"Fitting model with formula: {formula} and family: {family}")
@@ -140,7 +132,7 @@ def plot_random_slopes(model, cell_type):
           print(f"Skipping {term}: {e}")
 
 
-def plot_coefficients(coef_df, formula="logistic_regression"):
+def plot_coefficients(coef_df, formula="predicted_doublet", feature_type="binary", cell_type="all"):
     os.makedirs(formula, exist_ok=True)
     plt.figure(figsize=(10, 6))
     ax = sns.barplot(
@@ -151,12 +143,17 @@ def plot_coefficients(coef_df, formula="logistic_regression"):
         orient="h"
     )
     # add confidence intervals
+    # check if error is 
     for bar, (_,row) in zip(ax.patches, coef_df.iterrows()):
         bar_center = bar.get_y() + bar.get_height() / 2
         ci_low = row["2.5_ci"]
         ci_high = row["97.5_ci"]
         estimate = row["Estimate"]
-        
+    # check if error is greater than 1000
+        if ci_low < -1000 or ci_high > 1000:
+            print(f"Skipping error bar for {row['term']} due to extreme values: {ci_low}, {ci_high}")
+            continue
+ 
         plt.errorbar(
             x=estimate,
             y=bar_center,
@@ -168,14 +165,13 @@ def plot_coefficients(coef_df, formula="logistic_regression"):
             markersize=3
         )
         
-        
     plt.axvline(0, color="gray", linestyle="--")
-    formula_str = formula.replace("_", " ")
-    plt.title(f"{formula_str} Coefficients")
+    #formula_str = formula.replace("_", " ")
+    plt.title(f"Correct ~ {feature_type} coefficients for {cell_type}")
     plt.xlabel("Log Odds")
     plt.ylabel("Feature")
     plt.tight_layout()
-    plt.savefig(os.path.join(formula,"logistic_regression_coefficients.png"))
+    plt.savefig(os.path.join(formula, f"{cell_type}_{feature_type}_coefficients.png"))
     
 def plot_feature_violin(melted, feature):
   g = sns.catplot(
@@ -225,38 +221,37 @@ def plot_feature_boxplot(melted, feature):
 
 
 
-def build_formulas_with_doublet_options(predicted_meta, random_effect_column="study"):
-  """
-  Build two model formulas: one using predicted_doublet, one using doublet_score.
-  Only includes features with more than one unique value.
-  
-  Returns:
-      formulas (dict): keys are 'predicted_doublet' and 'doublet_score'
-  """
-  base_features = ["outlier_ribo", "outlier_mito", "outlier_hb", "counts_outlier"]
-  doublet_features = ["predicted_doublet", "doublet_score"]
+def build_formulas(predicted_meta, binary_features=None, 
+                   continuous_features=None, 
+                   doublet_features=["predicted_doublet", "doublet_score"]):
   
   formulas = {}
-  for doublet_col in doublet_features:
-    feature_cols = base_features + [doublet_col]
-    valid_feature_cols = []
+  for doublet_col in doublet_features:      # set type to binary or continuous
+    formulas[doublet_col] = {
+      "binary": None,
+      "continuous": None
+    } 
+    for feature_type, feature_set in [("binary", binary_features), ("continuous", continuous_features)]:
+      feature_cols = feature_set + [doublet_col]
+      valid_feature_cols = []
 
-    for col in feature_cols:
-      if col in predicted_meta.columns:
-        unique_vals = predicted_meta[col].dropna().unique()
-        if len(unique_vals) > 1:
-          valid_feature_cols.append(col)
+
+      for col in feature_cols:
+        if col in predicted_meta.columns:
+          unique_vals = predicted_meta[col].dropna().unique()
+          if len(unique_vals) > 1:
+            valid_feature_cols.append(col)
+          else:
+            print(f"Skipping {col}: only one unique value.")
         else:
-          print(f"Skipping {col}: only one unique value.")
+          print(f"Skipping {col}: column not found.")
+
+      if len(valid_feature_cols) > 0:
+        formula = " + ".join(valid_feature_cols)
+        formulas[doublet_col][feature_type] = formula
       else:
-        print(f"Skipping {col}: column not found.")
-
-    if len(valid_feature_cols) > 0:
-      formula = " + ".join(valid_feature_cols) + f" + (1 | {random_effect_column})"
-      formulas[doublet_col] = formula
-    else:
-      print(f"No valid features found for formula with {doublet_col}.")
-
+        print(f"No valid features found for formula with {doublet_col}.")
+  
   if not formulas:
-    raise ValueError("No valid formulas could be constructed.")
+    Warning("No valid formulas could be constructed.")
   return formulas

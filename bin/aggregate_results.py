@@ -42,7 +42,9 @@ def parse_arguments():
                         help="files containing f1 results with params")
     parser.add_argument("--ref_keys", type=str, nargs="+",
                         help="Reference keys to map",
-                        default=["subclass", "class", "family", "global"])                                            
+                        default=["subclass", "class", "family", "global"])  
+    parser.add_argument("--cutoff", type=float, default=0.5,
+                        help="Cutoff value for filtering results")
     if __name__ == "__main__":
         known_args, _ = parser.parse_known_args()
         return known_args
@@ -57,6 +59,7 @@ def main():
 
     ref_keys = args.ref_keys 
     predicted_meta_df = pd.DataFrame() 
+    cutoff = args.cutoff
      
     #for file in os.listdir(pipeline_results):
     for filepath in pipeline_results:
@@ -66,21 +69,18 @@ def main():
         # temp_df["method"] = method
         predicted_meta_df = pd.concat([temp_df, predicted_meta_df], ignore_index=True)
      
+    predicted_meta_df = predicted_meta_df[predicted_meta_df["cutoff"] <= cutoff]
     organism = predicted_meta_df["organism"].unique()[0]
     # replace "nan" with None
     predicted_meta_df = predicted_meta_df.replace("nan", None)
     #----------weighted f1 results----------------
-    # miscellaneous data wrangling
+    # miscellaneou ds data wrangling
       
     predicted_meta_df["region_match"] = predicted_meta_df.apply(lambda row: row['region'] in row['ref_region'], axis=1)
     predicted_meta_df["reference_acronym"] = predicted_meta_df["reference"].apply(make_acronym)
     predicted_meta_df["reference"] = predicted_meta_df["reference"].str.replace("_", " ")
     predicted_meta_df["study"] = predicted_meta_df["query"].apply(lambda x: x.split("_")[0])
     predicted_meta_df["query"] = predicted_meta_df["query"].str.replace("_", " ")
-    
-           
-
-    
     predicted_meta_df["disease_state"] = np.where(predicted_meta_df["disease"] == "Control", "Control", "Disease")
     
     
@@ -114,47 +114,11 @@ def main():
         predicted_meta_df["genotype"] = np.where(predicted_meta_df["genotype"].isnull(), "wild type genotype", predicted_meta_df["genotype"])
 
 
+    for key in ref_keys:
+        predicted_meta_df = is_correct(predicted_meta_df, level=key)
+    
     predicted_meta_df.to_csv("predicted_meta_combined.tsv", sep="\t", index=False)
-       
-    multiqc_dir = "multiqc"
-    os.makedirs(multiqc_dir, exist_ok=True) 
-    # save df for multiqc report
-    # get the unique values for each column
-    subclass_assignments = (
-                            predicted_meta_df
-                            .groupby(["subclass", "predicted_subclass"])
-                            .size()
-                            .unstack(fill_value=0)
-                            .reset_index()
-                            )
-
-    subclass_assignments.to_csv(os.path.join(multiqc_dir,"pred_subclass_assignments_mqc.tsv"), sep="\t", index=False)
-    
-    #do this for class and family
-    
-    class_assignments = (  predicted_meta_df
-                        .groupby(["class", "predicted_class"])  
-                        .size()
-                        .unstack(fill_value=0)
-                        .reset_index()
-                        )
-    class_assignments.to_csv(os.path.join(multiqc_dir, "pred_class_assignments_mqc.tsv"), sep="\t", index=False)
-    
-    family_assignments = ( predicted_meta_df
-                        .groupby(["family", "predicted_family"])
-                        .size()
-                        .unstack(fill_value=0)
-                        .reset_index()
-                        )
-    family_assignments.to_csv(os.path.join(multiqc_dir, "pred_family_assignments_mqc.tsv"), sep="\t", index=False)
-    if "global" in ref_keys:
-        global_assignments = ( predicted_meta_df
-                    .groupby(["global", "predicted_global"])
-                    .size()
-                    .unstack(fill_value=0)
-                    .reset_index()
-                    )
-        global_assignments.to_csv(os.path.join(multiqc_dir, "pred_global_assignments_mqc.tsv"), sep="\t", index=False)
+ 
 
 if __name__ == "__main__":
     main()

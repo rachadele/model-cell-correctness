@@ -1,6 +1,6 @@
 {
 	"organism": "mus_musculus",
-	"subsample": 100,
+	"subsample": 10,
 	"mapping_file": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/meta/census_map_mouse_author.tsv",
 	"ref_keys": [
 		"subclass",
@@ -8,5 +8,5 @@
 		"family",
 		"global"
 	],
-	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/mus_musculus/subsample_query_100/old_refs"
+	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/2025-01-30/mus_musculus/100/dataset_id/SCT"
 }
