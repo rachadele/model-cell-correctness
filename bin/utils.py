@@ -48,28 +48,7 @@ def is_correct(df, level="subclass"):
   # change to string type
   df["correct_" + level] = df["predicted_" + level].astype(str) == df[level].astype(str)
   return df
-  
-def stacked_bar_plot(predicted_meta, level="subclass"):
-  subclass_assignments = predicted_meta.groupby([level, "correct"]).size().reset_index(name='count')
-  pivot_df = subclass_assignments.pivot(index=level, columns='correct', values='count').fillna(0)
-  # Sort index (optional)
-  pivot_df = pivot_df.sort_index()
-  # Plot
-  pivot_df.plot(
-      kind='barh',
-      stacked=True,
-      figsize=(20, 20),
-      colormap='tab20'  # You can change the color map
-  )
-  plt.title("Stacked Bar Plot of Correctness")
-  plt.xlabel("True Subclass", fontsize=25)
-  plt.ylabel("Count", fontsize=25)
-  plt.legend(title="Predicted Subclass", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=20, title_fontsize=20)
-  plt.tight_layout()
-  plt.yticks(fontsize=25)
-  plt.xticks(fontsize=25)
-  plt.savefig("mapped_correct_boxplot.png", bbox_inches="tight")
-  
+
    
 def make_acronym(name):
     # Split on "_" and replace with spaces
@@ -111,26 +90,53 @@ def logistic_regression_on_correctness(predicted_meta, outcome, formula=None):
     return fit
 
 def run_llmer(df, formula, family="binomial"):
+  """Fit a binomial GLMM via direct rpy2 → lme4::glmer.
+
+  Returns a SimpleNamespace with `.coefs` (term × {Estimate, SE, Z-stat, P-val,
+  2.5_ci, 97.5_ci, OR/Prob and CIs, Sig}) and `.ranef_var` (grp × {Var, Std}),
+  matching the attributes expected by model_correct.py. We bypass pymer4 because
+  its post-fit summary extraction returns NULL on large dataframes in this env
+  (pandas2R quirk); direct glmer fits the same data without issue.
+  """
   print(f"Fitting model with formula: {formula} and family: {family}")
-  model = Lmer(formula, data=df, family=family)
-  #model.set_factors(["study"])
-  model.fit()
-  return(model)
-
-def plot_random_slopes(model, cell_type):
- # Get all fixed effect names (from .coefs index)
-  all_terms = model.coefs.index.tolist()
-  for term in all_terms:
-      try:
-          print(f"Plotting random slopes for: {term}")
-          model.plot(param=term, figsize=(8, 6))
-          plt.title(f"Effect of '{term}' by Study")
-          plt.tight_layout()
-          plt.savefig(f"{cell_type}_random_slope_{term}.png")
-          plt.close()
-      except Exception as e:
-          print(f"Skipping {term}: {e}")
-
+  if family != "binomial":
+    raise NotImplementedError(f"only binomial family supported, got {family}")
+  from rpy2 import robjects
+  from rpy2.robjects import pandas2ri, conversion, default_converter
+  from rpy2.robjects.packages import importr
+  cv = default_converter + pandas2ri.converter
+  with conversion.localconverter(cv):
+    importr("lme4")
+    robjects.globalenv["dat"] = pandas2ri.py2rpy(df)
+    robjects.r(f'fit_ <- glmer({formula}, data=dat, family=binomial)')
+    coef_mat = np.array(robjects.r('coef(summary(fit_))'))
+    rownames = list(robjects.r('rownames(coef(summary(fit_)))'))
+    vc = robjects.r('as.data.frame(VarCorr(fit_))')
+    if not isinstance(vc, pd.DataFrame):
+      vc = pandas2ri.rpy2py(vc)
+  coefs = pd.DataFrame(coef_mat, index=rownames,
+                       columns=["Estimate", "SE", "Z-stat", "P-val"])
+  coefs["2.5_ci"]   = coefs["Estimate"] - 1.96 * coefs["SE"]
+  coefs["97.5_ci"]  = coefs["Estimate"] + 1.96 * coefs["SE"]
+  coefs["OR"]            = np.exp(coefs["Estimate"])
+  coefs["OR_2.5_ci"]     = np.exp(coefs["2.5_ci"])
+  coefs["OR_97.5_ci"]    = np.exp(coefs["97.5_ci"])
+  coefs["Prob"]          = coefs["OR"]         / (1 + coefs["OR"])
+  coefs["Prob_2.5_ci"]   = coefs["OR_2.5_ci"]  / (1 + coefs["OR_2.5_ci"])
+  coefs["Prob_97.5_ci"]  = coefs["OR_97.5_ci"] / (1 + coefs["OR_97.5_ci"])
+  coefs["Sig"] = pd.cut(coefs["P-val"],
+                        bins=[-np.inf, 0.001, 0.01, 0.05, 0.1, np.inf],
+                        labels=["***", "**", "*", ".", ""])
+  ranef_var = vc.set_index("grp")[["vcov", "sdcor"]].rename(
+              columns={"vcov": "Var", "sdcor": "Std"})
+  # Match pymer4 convention: unnamed index so model_correct.py's
+  # reset_index().rename({"index": "term"}) produces the term column.
+  ranef_var.index.name = None
+  ranef_var["Name"] = "(Intercept)"
+  result = SimpleNamespace()
+  result.coefs = coefs
+  result.ranef_var = ranef_var
+  return result
 
 def plot_coefficients(coef_df, formula="predicted_doublet", feature_type="binary", cell_type="all"):
     os.makedirs(formula, exist_ok=True)
@@ -150,7 +156,7 @@ def plot_coefficients(coef_df, formula="predicted_doublet", feature_type="binary
         ci_high = row["97.5_ci"]
         estimate = row["Estimate"]
     # check if error is greater than 1000
-        if ci_low < -1000 or ci_high > 1000:
+        if ci_low < -100 or ci_high > 100:
             print(f"Skipping error bar for {row['term']} due to extreme values: {ci_low}, {ci_high}")
             continue
  

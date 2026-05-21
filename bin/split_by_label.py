@@ -57,11 +57,11 @@ def main():
         print(f"Not enough data for key: {key}, label: {label}")
         continue
   
-    # plot the f1 score distribution
       label_name = label.replace(" ", "_").replace("/", "_")
       os.makedirs(f"{key}/{label_name}", exist_ok=True)
       output_file = f"{key}/{label_name}/{label_name}_predicted_meta_subset.tsv"
       label_df.to_csv(output_file, sep="\t", index=False)
+       
 
 if __name__ == "__main__":
 	main()

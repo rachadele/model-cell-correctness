@@ -1,11 +1,15 @@
 {
 	"organism": "homo_sapiens",
+	"method": "scvi",
 	"mapping_file": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/meta/census_map_human.tsv",
 	"ref_keys": [
 		"subclass",
 		"class",
 		"family"
 	],
-	"subsample": 10,
-	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/2025-01-30/homo_sapiens/100/dataset_id/SCT"
+	"subsample": 100,
+	"results": "/space/grp/rschwartz/rschwartz/nextflow_eval_pipeline/2024-07-01/homo_sapiens_new/100/dataset_id/SCT/gap_false/ref_500",
+	"census_version": "2024-07-01",
+	"cutoff": 0,
+	"reference": "whole cortex"
 }

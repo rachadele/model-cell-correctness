@@ -32,14 +32,15 @@ process aggregateResults {
     path predicted_meta_combined
 
     output:
-   // path "f1_results_all_pipeline_runs.tsv", emit: f1_results_aggregated
 	path "**predicted_meta_combined.tsv", emit: aggregated_results
 
     script:
     """
     python $projectDir/bin/aggregate_results.py --pipeline_results ${predicted_meta_combined} \\
                                                 --ref_keys ${params.ref_keys.join(' ')} \\
-                                                --cutoff ${params.cutoff}
+                                                --cutoff ${params.cutoff} \\
+                                                --reference "${params.reference}"
+
 
     """
 
@@ -94,7 +95,6 @@ process split_by_label {
 
     output:
     path "**predicted_meta_subset.tsv", emit: predicted_meta_labels
-    
     script:
     """
     python $projectDir/bin/split_by_label.py --predicted_meta ${predicted_meta_combined} \\
@@ -141,15 +141,15 @@ process run_multiqc {
 workflow {
 
     Channel
-    .fromPath("${params.results}/*", type: 'dir') // Get all subdirectories
+    .fromPath("${params.results}/cutoff_${params.cutoff}", type: 'dir') // Single pipeline-run dir for selected cutoff
     .map { pipeline_run_dir ->
         def pipeline_run_dirname = pipeline_run_dir.getName().toString()
         def params_file = "${pipeline_run_dir}/params.yaml"
         def ref_obs = "${pipeline_run_dir}/refs/"
-        // Collect 'f1_results' directories
+        // Collect method-specific directories (scvi or seurat per params.method)
         def pipeline_results = []
         pipeline_run_dir.eachDirRecurse { dir ->
-                if (dir.getName() == 'scvi' || dir.getName() == 'seurat') {
+                if (dir.getName() == params.method) {
                         def dir_path = dir.toString()
                         pipeline_results << dir_path
             }
@@ -178,8 +178,7 @@ workflow {
         [cell_type, predicted_meta_subset]
     }.set { cell_type_subset }
 
-    
-    model_per_celltype(cell_type_subset) 
+   // model_per_celltype(cell_type_subset) 
 
     plotQC(predicted_meta_combined)
     run_multiqc(plotQC.out.multiqc_dir)

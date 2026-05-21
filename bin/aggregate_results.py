@@ -45,18 +45,20 @@ def parse_arguments():
                         default=["subclass", "class", "family", "global"])  
     parser.add_argument("--cutoff", type=float, default=0.5,
                         help="Cutoff value for filtering results")
+    parser.add_argument("--reference", type=str, default="whole cortex",
+                        help="Reference to filter results by")
     if __name__ == "__main__":
         known_args, _ = parser.parse_known_args()
         return known_args
 
-    
+
  
 def main():
     # Parse command line arguments
     args = parse_arguments()
     # Set organism and census_version from arguments
     pipeline_results = args.pipeline_results
-
+    reference = args.reference
     ref_keys = args.ref_keys 
     predicted_meta_df = pd.DataFrame() 
     cutoff = args.cutoff
@@ -69,14 +71,16 @@ def main():
         # temp_df["method"] = method
         predicted_meta_df = pd.concat([temp_df, predicted_meta_df], ignore_index=True)
      
-    predicted_meta_df = predicted_meta_df[predicted_meta_df["cutoff"] <= cutoff]
     organism = predicted_meta_df["organism"].unique()[0]
     # replace "nan" with None
     predicted_meta_df = predicted_meta_df.replace("nan", None)
     #----------weighted f1 results----------------
     # miscellaneou ds data wrangling
       
-    predicted_meta_df["region_match"] = predicted_meta_df.apply(lambda row: row['region'] in row['ref_region'], axis=1)
+    if "region" in predicted_meta_df.columns:
+        predicted_meta_df["region_match"] = predicted_meta_df.apply(lambda row: row['region'] in row['ref_region'], axis=1)
+    else:
+        predicted_meta_df["region_match"] = pd.NA
     predicted_meta_df["reference_acronym"] = predicted_meta_df["reference"].apply(make_acronym)
     predicted_meta_df["reference"] = predicted_meta_df["reference"].str.replace("_", " ")
     predicted_meta_df["study"] = predicted_meta_df["query"].apply(lambda x: x.split("_")[0])
@@ -84,22 +88,22 @@ def main():
     predicted_meta_df["disease_state"] = np.where(predicted_meta_df["disease"] == "Control", "Control", "Disease")
     
     
+    
     if organism == "homo_sapiens":
         # data wrangling for missing disease (all controls)
-        predicted_meta_df["disease"] = np.where(predicted_meta_df["study"]=="GSE211870", "Control", predicted_meta_df["disease"]) 
-    
-        # deal with annotation mismatch between gemma queries and curated queries
-        predicted_meta_df["dev_stage"] = predicted_meta_df["dev_stage"].map(dev_stage_mapping_dict) 
-        
-    # Data wrangling for Rosmap error (dev stage mistakely mapped as "infant")
-        predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["study"] == "rosmap" , "late adult", predicted_meta_df["dev_stage"])
-        
-    # data wrangling for missing Pineda dev stage   
-        predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["study"] == "pineda" , "late adult", predicted_meta_df["dev_stage"])
+        predicted_meta_df["disease"] = np.where(predicted_meta_df["study"]=="GSE211870", "Control", predicted_meta_df["disease"])
+
+        if "dev_stage" in predicted_meta_df.columns:
+            # deal with annotation mismatch between gemma queries and curated queries
+            predicted_meta_df["dev_stage"] = predicted_meta_df["dev_stage"].map(dev_stage_mapping_dict)
+            # Data wrangling for Rosmap error (dev stage mistakely mapped as "infant")
+            predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["study"] == "rosmap" , "late adult", predicted_meta_df["dev_stage"])
+            # data wrangling for missing Pineda dev stage
+            predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["study"] == "pineda" , "late adult", predicted_meta_df["dev_stage"])
+            predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["query"] == "lim_C5382Cd" , "late adult", predicted_meta_df["dev_stage"])
 
     # data wrangling for Lim sample missing from original metadata
         predicted_meta_df["sex"] = np.where(predicted_meta_df["query"]=="lim_C5382Cd", "male", predicted_meta_df["sex"])
-        predicted_meta_df["dev_stage"] = np.where(predicted_meta_df["query"] == "lim_C5382Cd" , "late adult", predicted_meta_df["dev_stage"])
 
 
     # data wrangling for sex (Gemmma data uses male:female, conform to this naming scheme)
@@ -116,6 +120,12 @@ def main():
 
     for key in ref_keys:
         predicted_meta_df = is_correct(predicted_meta_df, level=key)
+   
+    # filter by  cutoff
+    predicted_meta_df = predicted_meta_df[predicted_meta_df["cutoff"] <= cutoff]
+    # filter by reference
+    print(f"Filtering results by reference: {reference}")
+    predicted_meta_df = predicted_meta_df[predicted_meta_df['reference'] == reference]
     
     predicted_meta_df.to_csv("predicted_meta_combined.tsv", sep="\t", index=False)
  
