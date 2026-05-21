@@ -29,6 +29,32 @@ custom_data:
     description: 'Global assignments after mapping to appropriate level of granularity.'
     file_format: 'tsv'
     plot_type: 'barplot'
+
+  # Correctness sections
+
+  subclass_correctness:
+    section_name: 'Subclass Correctness'
+    description: 'Correctness of subclass assignments.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  class_correctness:
+    section_name: 'Class Correctness'
+    description: 'Correctness of class assignments.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  family_correctness:
+    section_name: 'Family Correctness'
+    description: 'Correctness of family assignments.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
+
+  global_correctness:
+    section_name: 'Global Correctness'
+    description: 'Correctness of global assignments.'
+    file_format: 'tsv'
+    plot_type: 'barplot'
   
   study_correctness:
     section_name: 'Study Correctness'
@@ -75,6 +101,14 @@ sp:
     fn: '**pred_family_assignments_mqc.tsv'
   global_assignments:
     fn: '**pred_global_assignments_mqc.tsv'
+  subclass_correctness:
+    fn: '**true_subclass_correctness_mqc.tsv'
+  class_correctness:
+    fn: '**true_class_correctness_mqc.tsv'
+  family_correctness:
+    fn: '**true_family_correctness_mqc.tsv'
+  global_correctness:
+    fn: '**true_global_correctness_mqc.tsv'
   study_correctness:
     fn: '**study_correctness_mqc.tsv'
   ref_correctness:

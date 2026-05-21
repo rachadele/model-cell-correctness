@@ -145,9 +145,39 @@ def main():
                         )
     method_correctness.to_csv(os.path.join(multiqc_dir, "method_correctness_mqc.tsv"), sep="\t", index=False)
 
-    #if "age" in predicted_meta_df.columns:
-      #  #check if float
-       # if predicted_meta_df["age"].dtype == "float64":
+    # correctness by cell type
+    subclass_correctness = (predicted_meta_df
+                            .groupby(["subclass", "correct_subclass"])
+                            .size()
+                            .unstack(fill_value=0)
+                            .reset_index()
+                            )
+    subclass_correctness.to_csv(os.path.join(multiqc_dir, "true_subclass_correctness_mqc.tsv"), sep="\t", index=False)
+    
+    class_correctness = (predicted_meta_df
+                        .groupby(["class", "correct_class"])
+                        .size()
+                        .unstack(fill_value=0)
+                        .reset_index()
+                        )
+    class_correctness.to_csv(os.path.join(multiqc_dir, "true_class_correctness_mqc.tsv"), sep="\t", index=False)
+    
+    family_correctness = (predicted_meta_df
+                        .groupby(["family", "correct_family"])
+                        .size()
+                        .unstack(fill_value=0)
+                        .reset_index()
+                        )
+    family_correctness.to_csv(os.path.join(multiqc_dir, "true_family_correctness_mqc.tsv"), sep="\t", index=False)
+    
+    if "global" in ref_keys:
+        global_correctness = (predicted_meta_df
+                            .groupby(["global", "correct_global"])
+                            .size()
+                            .unstack(fill_value=0)
+                            .reset_index()
+                            )
+        global_correctness.to_csv(os.path.join(multiqc_dir, "true_global_correctness_mqc.tsv"), sep="\t", index=False)
             
 if __name__ == "__main__":
     main()
